@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated data and local database
+data/raw/
+data/processed/
+data/edhrec/
+db/*.db
+db/*.sqlite
+db/*.sqlite3
+
+# Local/editor noise
+.env
+.vscode/
+.idea/
+*.log
