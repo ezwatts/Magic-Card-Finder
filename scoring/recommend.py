@@ -2,6 +2,20 @@ from difflib import get_close_matches
 
 from tagging.tag_rules import TAG_SYNERGIES
 
+STRUCTURAL_TAGS = {
+    "artifact",
+    "battle",
+    "creature",
+    "enchantment",
+    "instant",
+    "land",
+    "legendary",
+    "planeswalker",
+    "saga",
+    "sorcery",
+    "vehicle",
+}
+
 
 def normalize_name(name: str) -> str:
     return " ".join(name.casefold().split())
@@ -48,7 +62,19 @@ def commander_synergy_score(card: dict, commander: dict) -> float:
     indirect_overlap = card_tags & connected_tags
     support_tags = card_tags & {"card_draw", "mana_ramp", "removal", "protection", "tutor"}
 
-    return min(45, len(direct_overlap) * 10 + len(indirect_overlap) * 7 + len(support_tags) * 2)
+    strategic_direct = direct_overlap - STRUCTURAL_TAGS
+    structural_direct = direct_overlap & STRUCTURAL_TAGS
+    strategic_indirect = indirect_overlap - STRUCTURAL_TAGS
+    structural_indirect = indirect_overlap & STRUCTURAL_TAGS
+
+    return min(
+        45,
+        len(strategic_direct) * 10
+        + len(structural_direct) * 3
+        + len(strategic_indirect) * 7
+        + len(structural_indirect) * 2
+        + len(support_tags) * 2,
+    )
 
 
 def commander_relevance_score(card: dict, commander: dict) -> float:

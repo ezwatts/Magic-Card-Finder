@@ -7,6 +7,7 @@ from config import EDHREC_POPULARITY_PATH, SCORED_CARDS_PATH, TAGGED_CARDS_PATH,
 from tagging.tag_rules import TAG_SYNERGIES
 
 TAG_POWER_WEIGHTS = {
+    "activated_abilities": 5,
     "card_draw": 12,
     "mana_ramp": 12,
     "removal": 10,
@@ -27,6 +28,44 @@ TAG_POWER_WEIGHTS = {
     "lifegain": 3,
     "mill": 3,
     "voltron": 4,
+    "artifact": 2,
+    "attack_triggers": 6,
+    "clues": 5,
+    "coin_flip": 1,
+    "crimes": 4,
+    "creature": 1,
+    "cycling": 4,
+    "dice_rolling": 1,
+    "dungeon": 3,
+    "enchantment": 2,
+    "energy": 5,
+    "etb": 7,
+    "exile": 5,
+    "extra_combat": 12,
+    "fight": 5,
+    "flash": 5,
+    "historic": 4,
+    "impulse_draw": 8,
+    "land": 2,
+    "land_animation": 4,
+    "legendary": 2,
+    "monarch": 8,
+    "ninjutsu": 5,
+    "plus_one_counters": 5,
+    "minus_one_counters": 4,
+    "planeswalker": 3,
+    "politics": 2,
+    "power_matters": 3,
+    "proliferate": 7,
+    "reanimator": 10,
+    "saga": 3,
+    "snow": 2,
+    "tap_untap": 6,
+    "toughness_matters": 3,
+    "treasures": 8,
+    "topdeck": 6,
+    "unblockable": 4,
+    "vehicle": 3,
 }
 
 KEYWORD_WEIGHTS = {
@@ -41,7 +80,20 @@ KEYWORD_WEIGHTS = {
     "Ward": 2,
 }
 
-PREMIUM_TAGS = {"card_draw", "mana_ramp", "removal", "tutor", "recursion", "protection", "stax", "doubling"}
+PREMIUM_TAGS = {
+    "card_draw",
+    "mana_ramp",
+    "removal",
+    "tutor",
+    "recursion",
+    "protection",
+    "stax",
+    "doubling",
+    "extra_combat",
+    "reanimator",
+    "monarch",
+    "impulse_draw",
+}
 
 CARD_TYPE_COST_TOLERANCE = {
     "Instant": 0.15,

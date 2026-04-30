@@ -108,9 +108,10 @@ def save_commander_recommendations(
 
 def show_commander_recommendations(
     commander_name: str,
-    limit: int = 25,
+    limit: int = 50,
     min_power: float = 0,
     output: str | None = None,
+    clean: bool = False,
 ) -> None:
     cards = load_json(SCORED_CARDS_PATH, [])
     commander, recommendations = recommend_for_commander(cards, commander_name, limit, min_power)
@@ -119,11 +120,16 @@ def show_commander_recommendations(
     output_path = Path(output) if output else default_commander_output_path(commander["name"])
     save_commander_recommendations(commander, recommendations, output_path, commander_name, min_power)
 
-    print(f"Commander: {commander['name']} [{commander_colors}] tags=[{commander_tags}]")
-    print(f"Saved: {output_path}")
-    print()
+    if not clean:
+        print(f"Commander: {commander['name']} [{commander_colors}] tags=[{commander_tags}]")
+        print(f"Saved: {output_path}")
+        print()
 
     for card in recommendations:
+        if clean:
+            print(card["name"])
+            continue
+
         tags = ", ".join(card.get("tags") or [])
         print(
             f"{card['name']}: commander={card['commander_relevance_score']} "
@@ -161,9 +167,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     commander_parser = subparsers.add_parser("commander")
     commander_parser.add_argument("name", help="Commander name to build around.")
-    commander_parser.add_argument("--limit", type=int, default=25)
+    commander_parser.add_argument("--limit", type=int, default=50)
     commander_parser.add_argument("--min-power", type=float, default=0)
     commander_parser.add_argument("--output", help="Optional output JSON path.")
+    commander_parser.add_argument("--clean", action="store_true", help="Print only recommended card names.")
 
     pipeline_parser = subparsers.add_parser("pipeline")
     pipeline_parser.add_argument("--skip-network", action="store_true")
@@ -188,6 +195,7 @@ def main() -> None:
             args.limit,
             args.min_power,
             args.output,
+            args.clean,
         ),
         "pipeline": lambda: run_pipeline(args.skip_network),
     }
