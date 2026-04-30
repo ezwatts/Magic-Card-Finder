@@ -49,7 +49,29 @@ def is_color_legal(card: dict, commander: dict) -> bool:
     return card_identity <= commander_identity
 
 
-def commander_synergy_score(card: dict, commander: dict) -> float:
+def tag_focus_multiplier(tag: str, focus_weights: dict[str, float] | None = None) -> float:
+    if not focus_weights:
+        return 1
+    return focus_weights.get(tag, 1)
+
+
+def weighted_tag_score(tags: set[str], base_points: float, focus_weights: dict[str, float] | None = None) -> float:
+    return sum(base_points * tag_focus_multiplier(tag, focus_weights) for tag in tags)
+
+
+def focus_match_score(card: dict, focus_weights: dict[str, float] | None = None) -> float:
+    if not focus_weights:
+        return 0
+
+    card_tags = set(card.get("tags") or [])
+    return round(sum(12 * weight for tag, weight in focus_weights.items() if tag in card_tags), 2)
+
+
+def commander_synergy_score(
+    card: dict,
+    commander: dict,
+    focus_weights: dict[str, float] | None = None,
+) -> float:
     card_tags = set(card.get("tags") or [])
     commander_tags = set(commander.get("tags") or [])
 
@@ -61,29 +83,44 @@ def commander_synergy_score(card: dict, commander: dict) -> float:
 
     indirect_overlap = card_tags & connected_tags
     support_tags = card_tags & {"card_draw", "mana_ramp", "removal", "protection", "tutor"}
+    focused_tags = card_tags & set(focus_weights or {})
 
     strategic_direct = direct_overlap - STRUCTURAL_TAGS
     structural_direct = direct_overlap & STRUCTURAL_TAGS
     strategic_indirect = indirect_overlap - STRUCTURAL_TAGS
     structural_indirect = indirect_overlap & STRUCTURAL_TAGS
 
-    return min(
-        45,
-        len(strategic_direct) * 10
-        + len(structural_direct) * 3
-        + len(strategic_indirect) * 7
-        + len(structural_indirect) * 2
-        + len(support_tags) * 2,
+    score = (
+        weighted_tag_score(strategic_direct, 10, focus_weights)
+        + weighted_tag_score(structural_direct, 3, focus_weights)
+        + weighted_tag_score(strategic_indirect, 7, focus_weights)
+        + weighted_tag_score(structural_indirect, 2, focus_weights)
+        + weighted_tag_score(support_tags, 2, focus_weights)
+        + weighted_tag_score(focused_tags, 8, focus_weights)
     )
 
+    return min(60 if focus_weights else 45, score)
 
-def commander_relevance_score(card: dict, commander: dict) -> float:
-    synergy = commander_synergy_score(card, commander)
+
+def commander_relevance_score(
+    card: dict,
+    commander: dict,
+    focus_weights: dict[str, float] | None = None,
+) -> float:
+    synergy = commander_synergy_score(card, commander, focus_weights)
     power = float(card.get("power_score") or 0)
     opportunity = float(card.get("opportunity_score") or 0)
     efficiency = float(card.get("efficiency_score") or 0)
+    focus_score = focus_match_score(card, focus_weights)
 
-    return round((power * 0.42) + (opportunity * 0.28) + (synergy * 0.25) + (efficiency * 0.05), 2)
+    return round(
+        (power * 0.38)
+        + (opportunity * 0.23)
+        + (synergy * 0.24)
+        + (efficiency * 0.05)
+        + focus_score,
+        2,
+    )
 
 
 def explain_match(card: dict, commander: dict) -> str:
@@ -113,6 +150,7 @@ def recommend_for_commander(
     commander_name: str,
     limit: int = 25,
     min_power: float = 0,
+    focus_weights: dict[str, float] | None = None,
 ) -> tuple[dict, list[dict]]:
     commander = find_card(cards, commander_name)
     recommendations = []
@@ -125,19 +163,22 @@ def recommend_for_commander(
         if float(card.get("power_score") or 0) < min_power:
             continue
 
-        synergy = commander_synergy_score(card, commander)
-        if synergy <= 0 and float(card.get("power_score") or 0) < 70:
+        synergy = commander_synergy_score(card, commander, focus_weights)
+        focused_match = bool(set(card.get("tags") or []) & set(focus_weights or {}))
+        if synergy <= 0 and float(card.get("power_score") or 0) < 70 and not focused_match:
             continue
 
         enriched = dict(card)
         enriched["commander_synergy_score"] = synergy
-        enriched["commander_relevance_score"] = commander_relevance_score(card, commander)
+        enriched["focus_match_score"] = focus_match_score(card, focus_weights)
+        enriched["commander_relevance_score"] = commander_relevance_score(card, commander, focus_weights)
         enriched["commander_match"] = explain_match(card, commander)
         recommendations.append(enriched)
 
     recommendations.sort(
         key=lambda card: (
             card["commander_relevance_score"],
+            card.get("focus_match_score") or 0,
             card["commander_synergy_score"],
             card.get("opportunity_score") or 0,
         ),

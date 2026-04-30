@@ -13,6 +13,19 @@ from scoring.score import load_json, save_scored, score_cards
 from tagging.tag_engine import load_cards, save_tagged, tag_cards
 
 
+def parse_focus_weights(focus_values: list[str] | None) -> dict[str, float]:
+    weights = {}
+
+    for value in focus_values or []:
+        if "=" in value:
+            tag, raw_weight = value.split("=", 1)
+            weights[tag.strip()] = float(raw_weight)
+        else:
+            weights[value.strip()] = 1.5
+
+    return {tag: weight for tag, weight in weights.items() if tag and weight > 0}
+
+
 def run_scryfall() -> None:
     cards = fetch_bulk_cards()
     save_raw(cards)
@@ -81,6 +94,7 @@ def save_commander_recommendations(
     output_path: Path,
     requested_name: str,
     min_power: float,
+    focus_weights: dict[str, float] | None = None,
 ) -> None:
     ensure_project_dirs()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,6 +112,7 @@ def save_commander_recommendations(
         "filters": {
             "limit": len(recommendations),
             "min_power": min_power,
+            "focus_weights": focus_weights or {},
         },
         "recommendations": recommendations,
     }
@@ -112,16 +127,28 @@ def show_commander_recommendations(
     min_power: float = 0,
     output: str | None = None,
     clean: bool = False,
+    focus_values: list[str] | None = None,
 ) -> None:
     cards = load_json(SCORED_CARDS_PATH, [])
-    commander, recommendations = recommend_for_commander(cards, commander_name, limit, min_power)
+    focus_weights = parse_focus_weights(focus_values)
+    commander, recommendations = recommend_for_commander(cards, commander_name, limit, min_power, focus_weights)
     commander_tags = ", ".join(commander.get("tags") or [])
     commander_colors = "".join(commander.get("color_identity") or []) or "colorless"
     output_path = Path(output) if output else default_commander_output_path(commander["name"])
-    save_commander_recommendations(commander, recommendations, output_path, commander_name, min_power)
+    save_commander_recommendations(
+        commander,
+        recommendations,
+        output_path,
+        commander_name,
+        min_power,
+        focus_weights,
+    )
 
     if not clean:
         print(f"Commander: {commander['name']} [{commander_colors}] tags=[{commander_tags}]")
+        if focus_weights:
+            focus_display = ", ".join(f"{tag}={weight:g}" for tag, weight in focus_weights.items())
+            print(f"Focus: {focus_display}")
         print(f"Saved: {output_path}")
         print()
 
@@ -134,6 +161,7 @@ def show_commander_recommendations(
         print(
             f"{card['name']}: commander={card['commander_relevance_score']} "
             f"synergy={card['commander_synergy_score']} power={card['power_score']} "
+            f"focus={card.get('focus_match_score')} "
             f"opportunity={card['opportunity_score']} value={card.get('cost_adjusted_value')} "
             f"match=({card['commander_match']}) tags=[{tags}]"
         )
@@ -171,6 +199,11 @@ def build_parser() -> argparse.ArgumentParser:
     commander_parser.add_argument("--min-power", type=float, default=0)
     commander_parser.add_argument("--output", help="Optional output JSON path.")
     commander_parser.add_argument("--clean", action="store_true", help="Print only recommended card names.")
+    commander_parser.add_argument(
+        "--focus",
+        action="append",
+        help="Increase or decrease a tag's importance. Examples: --focus graveyard or --focus plus_one_counters=0.5",
+    )
 
     pipeline_parser = subparsers.add_parser("pipeline")
     pipeline_parser.add_argument("--skip-network", action="store_true")
@@ -196,6 +229,7 @@ def main() -> None:
             args.min_power,
             args.output,
             args.clean,
+            args.focus,
         ),
         "pipeline": lambda: run_pipeline(args.skip_network),
     }
