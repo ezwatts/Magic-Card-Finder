@@ -95,6 +95,9 @@ def save_commander_recommendations(
     requested_name: str,
     min_power: float,
     focus_weights: dict[str, float] | None = None,
+    require_focus: bool = False,
+    required_tags: list[str] | None = None,
+    tribe: str | None = None,
 ) -> None:
     ensure_project_dirs()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,6 +116,9 @@ def save_commander_recommendations(
             "limit": len(recommendations),
             "min_power": min_power,
             "focus_weights": focus_weights or {},
+            "require_focus": require_focus,
+            "required_tags": required_tags or [],
+            "tribe": tribe,
         },
         "recommendations": recommendations,
     }
@@ -128,10 +134,22 @@ def show_commander_recommendations(
     output: str | None = None,
     clean: bool = False,
     focus_values: list[str] | None = None,
+    require_focus: bool = False,
+    required_tags: list[str] | None = None,
+    tribe: str | None = None,
 ) -> None:
     cards = load_json(SCORED_CARDS_PATH, [])
     focus_weights = parse_focus_weights(focus_values)
-    commander, recommendations = recommend_for_commander(cards, commander_name, limit, min_power, focus_weights)
+    commander, recommendations = recommend_for_commander(
+        cards,
+        commander_name,
+        limit,
+        min_power,
+        focus_weights,
+        require_focus,
+        set(required_tags or []),
+        tribe,
+    )
     commander_tags = ", ".join(commander.get("tags") or [])
     commander_colors = "".join(commander.get("color_identity") or []) or "colorless"
     output_path = Path(output) if output else default_commander_output_path(commander["name"])
@@ -142,6 +160,9 @@ def show_commander_recommendations(
         commander_name,
         min_power,
         focus_weights,
+        require_focus,
+        required_tags,
+        tribe,
     )
 
     if not clean:
@@ -149,6 +170,12 @@ def show_commander_recommendations(
         if focus_weights:
             focus_display = ", ".join(f"{tag}={weight:g}" for tag, weight in focus_weights.items())
             print(f"Focus: {focus_display}")
+        if require_focus:
+            print("Require focus: yes")
+        if required_tags:
+            print(f"Required tags: {', '.join(required_tags)}")
+        if tribe:
+            print(f"Tribal: {tribe}")
         print(f"Saved: {output_path}")
         print()
 
@@ -162,6 +189,7 @@ def show_commander_recommendations(
             f"{card['name']}: commander={card['commander_relevance_score']} "
             f"synergy={card['commander_synergy_score']} power={card['power_score']} "
             f"focus={card.get('focus_match_score')} "
+            f"tribal={card.get('tribal_match_score')} "
             f"opportunity={card['opportunity_score']} value={card.get('cost_adjusted_value')} "
             f"match=({card['commander_match']}) tags=[{tags}]"
         )
@@ -204,6 +232,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         help="Increase or decrease a tag's importance. Examples: --focus graveyard or --focus plus_one_counters=0.5",
     )
+    commander_parser.add_argument(
+        "--require-focus",
+        action="store_true",
+        help="Only include cards that match at least one focused tag.",
+    )
+    commander_parser.add_argument(
+        "--require-tag",
+        action="append",
+        help="Only include cards with this tag. Can be repeated.",
+    )
+    commander_parser.add_argument(
+        "--tribal",
+        help="Only include cards of this creature type or cards that mention/support it. Example: --tribal Goblins",
+    )
 
     pipeline_parser = subparsers.add_parser("pipeline")
     pipeline_parser.add_argument("--skip-network", action="store_true")
@@ -230,6 +272,9 @@ def main() -> None:
             args.output,
             args.clean,
             args.focus,
+            args.require_focus,
+            args.require_tag,
+            args.tribal,
         ),
         "pipeline": lambda: run_pipeline(args.skip_network),
     }

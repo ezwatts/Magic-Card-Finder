@@ -6,6 +6,14 @@ TAG_PATTERNS = {
     "activated_abilities": [r"activated abilities", r": [a-z{]", r"activate only"],
     "artifact": [r"\bartifact\b"],
     "attack_triggers": [r"whenever .* attacks", r"whenever .* attack", r"attacks, "],
+    "big_creatures": [
+        r"power (4|5|6|7|8|9|10|x) or greater",
+        r"mana value (5|6|7|8|9|10|x) or greater",
+        r"greatest power",
+        r"total power",
+        r"\bferocious\b",
+        r"\bformidable\b",
+    ],
     "blink": [r"exile .* return .* battlefield", r"exile .* then return", r"return .* to the battlefield under .* owner's control"],
     "card_draw": [r"\bdraws? (a|one|two|three|four|x|\d+) cards?", r"draw that many cards?"],
     "clues": [r"clue token", r"investigate"],
@@ -27,6 +35,18 @@ TAG_PATTERNS = {
     "fight": [r"\bfights?\b"],
     "flash": [r"\bflash\b", r"as though .* had flash"],
     "graveyard": [r"graveyard", r"return .* from your graveyard", r"escape", r"delirium", r"threshold"],
+    "hand_cheat": [
+        r"put .* from your hand onto the battlefield",
+        r"put .* card from your hand onto the battlefield",
+        r"put .* permanent .* from your hand onto the battlefield",
+        r"put .* artifact .* from your hand onto the battlefield",
+        r"put .* enchantment .* from your hand onto the battlefield",
+        r"put .* land .* from your hand onto the battlefield",
+    ],
+    "hand_creature_cheat": [
+        r"put .* creature .* from your hand onto the battlefield",
+        r"put .* creature card from your hand onto the battlefield",
+    ],
     "historic": [r"\bhistoric\b", r"artifact, legendary, or saga"],
     "impulse_draw": [r"exile .* top .* library", r"you may play .* exiled", r"you may cast .* exiled"],
     "landfall": [r"land enters", r"landfall", r"play an additional land"],
@@ -69,6 +89,26 @@ TAG_PATTERNS = {
     "treasures": [r"treasure token"],
     "tokens": [r"create .* token", r"populate"],
     "topdeck": [r"top card of your library", r"scry", r"surveil", r"look at the top", r"reveal the top"],
+    "topdeck_cheat": [
+        r"put .* from .* top .* library .* onto the battlefield",
+        r"reveal .* top .* library.* put .* onto the battlefield",
+        r"look at .* top .* library.* put .* onto the battlefield",
+        r"cast .* from .* top .* library without paying",
+        r"play .* from .* top .* library without paying",
+        r"may cast creature spells? from the top of your library",
+    ],
+    "topdeck_creature_cheat": [
+        r"reveal .* top .* library.* creature .* put .* onto the battlefield",
+        r"reveal .* top .* library.* put .* creature .* onto the battlefield",
+        r"look at .* top .* library.* creature .* put .* onto the battlefield",
+        r"look at .* top .* library.* put .* creature .* onto the battlefield",
+        r"put .* creature .* from .* top .* library .* onto the battlefield",
+        r"may cast creature spells? from the top of your library",
+        r"reveal .* top .* library.* permanent .* put .* onto the battlefield",
+        r"reveal .* top .* library.* put .* permanent .* onto the battlefield",
+        r"look at .* top .* library.* permanent .* put .* onto the battlefield",
+        r"look at .* top .* library.* put .* permanent .* onto the battlefield",
+    ],
     "tutor": [r"search your library", r"reveal .* from your library"],
     "unblockable": [r"can't be blocked", r"unblockable"],
     "vehicle": [r"\bvehicle\b", r"\bcrew\b"],
@@ -79,6 +119,7 @@ TAG_SYNERGIES = {
     "aristocrats": {"sacrifice", "tokens", "recursion"},
     "artifact": {"historic", "treasures", "clues", "sacrifice", "recursion"},
     "attack_triggers": {"extra_combat", "unblockable", "voltron", "ninjutsu"},
+    "big_creatures": {"power_matters", "topdeck_cheat", "reanimator", "mana_ramp", "fight"},
     "blink": {"etb", "ltb", "card_draw", "removal", "tokens"},
     "card_draw": {"cycling", "monarch", "impulse_draw", "topdeck"},
     "clues": {"artifact", "tokens", "sacrifice", "card_draw"},
@@ -96,6 +137,8 @@ TAG_SYNERGIES = {
     "extra_combat": {"attack_triggers", "voltron", "tokens"},
     "fight": {"power_matters", "removal"},
     "graveyard": {"discard", "mill", "recursion", "sacrifice", "cycling"},
+    "hand_cheat": {"big_creatures", "mana_ramp", "card_draw", "etb"},
+    "hand_creature_cheat": {"hand_cheat", "big_creatures", "creature", "etb", "power_matters"},
     "historic": {"artifact", "legendary", "saga"},
     "impulse_draw": {"exile", "topdeck", "spellslinger", "card_draw"},
     "landfall": {"mana_ramp", "tokens"},
@@ -110,7 +153,7 @@ TAG_SYNERGIES = {
     "plus_one_counters": {"counters", "doubling", "proliferate", "tokens"},
     "minus_one_counters": {"counters", "proliferate", "doubling", "removal"},
     "planeswalker": {"proliferate", "doubling", "protection"},
-    "power_matters": {"fight", "plus_one_counters", "voltron", "tokens"},
+    "power_matters": {"big_creatures", "fight", "plus_one_counters", "voltron", "tokens"},
     "proliferate": {"counters", "experience_counters", "plus_one_counters", "minus_one_counters", "energy", "planeswalker", "saga"},
     "recursion": {"etb", "ltb", "graveyard", "sacrifice"},
     "removal": {"crimes", "fight", "spellslinger"},
@@ -123,7 +166,9 @@ TAG_SYNERGIES = {
     "toughness_matters": {"plus_one_counters", "tokens", "protection"},
     "treasures": {"artifact", "tokens", "sacrifice", "mana_ramp"},
     "tokens": {"aristocrats", "counters", "doubling", "sacrifice", "artifact", "treasures", "clues"},
-    "topdeck": {"card_draw", "impulse_draw", "miracle"},
+    "topdeck": {"card_draw", "impulse_draw", "miracle", "topdeck_cheat"},
+    "topdeck_cheat": {"topdeck", "big_creatures", "creature", "mana_ramp", "topdeck_creature_cheat"},
+    "topdeck_creature_cheat": {"topdeck_cheat", "topdeck", "big_creatures", "creature"},
     "unblockable": {"ninjutsu", "attack_triggers", "voltron"},
     "vehicle": {"artifact", "tap_untap", "creature"},
     "voltron": {"protection", "card_draw"},
@@ -173,6 +218,12 @@ def tag_card(text: str, type_line: str = "", keywords: list[str] | None = None) 
     if tags & {"clues", "treasures"}:
         tags.add("tokens")
         tags.add("artifact")
+    if "topdeck_creature_cheat" in tags:
+        tags.add("topdeck_cheat")
+        tags.add("topdeck")
+    if "hand_creature_cheat" in tags:
+        tags.add("hand_cheat")
+        tags.add("creature")
     if "saga" in tags:
         tags.add("enchantment")
     if "vehicle" in tags:
